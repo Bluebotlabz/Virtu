@@ -37,13 +37,14 @@ class davinci3():
         )
         
         response = completion.choices[0].text
-        print("Response: " + response)
         if (len(response.strip()) >= 9 and response.strip().lower()[:9] == "response: "):
             response = re.sub('response: ', '', response, 1, re.I)
         elif (len(response.strip()) >= 9 and response.strip().lower()[:9] == "response:"):
             response = re.sub('response:', '', response, 1, re.I)
         elif ("response:" in response.lower()):
             response = re.sub('response:', '', response, 1, re.I)
+
+        print("Response: " + response)
 
         # Add response to memory and return it
         self.memory.append("Response: " + response)
