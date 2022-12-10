@@ -1,20 +1,30 @@
 import openai
 import re
+import os
 
 # Handle all the AI Stuff
 class davinci3():
     def __init__(self, secrets):
-        # Initialize OpenAI
+        # Initialise OpenAI
         openai.api_key = secrets["openai_api_key"]
         engines = openai.Engine.list()
         ## for engine in engines.data:
         ##     if (engine.object == "engine" and engine.ready):
         ##         print(engine.id)
 
-        # Initialize "addons"
+        # Initialise "addons"
         self.memory = [
             "Virtu is a large language model trained by OpenAI. knowledge cutoff: 2021-09 Current date: December 10 2022 Browsing: disabled"
         ]
+
+        # Define initialisation prompts
+        self.initialisationPrompts = {}
+        
+        availablePromptFiles = os.listdir("./initialisationPrompts/")
+        for promptFile in availablePromptFiles:
+            with open(os.path.join("./initialisationPrompts", promptFile), 'r') as file:
+                promptData = file.read()
+                self.initialisationPrompts['.'.join(promptFile.split('.')[:-1])] = promptData.split("===")
 
     # Reset memory
     def resetMemory(self):
@@ -44,9 +54,22 @@ class davinci3():
         elif ("response:" in response.lower()):
             response = re.sub('response:', '', response, 1, re.I)
 
-        print("Response: " + response)
+        response = response.lstrip()
+
+        #print("Response: " + response)
 
         # Add response to memory and return it
         self.memory.append("Response: " + response)
+
+        return response
+
+    def processInitialisationPrompt(self, prompt):
+        self.resetMemory()
+        response = ""
+
+        for promptToInitialiseWith in self.initialisationPrompts[prompt]:
+            response = self.processPrompt(promptToInitialiseWith)
+
+        print('\n'.join(self.memory))
 
         return response

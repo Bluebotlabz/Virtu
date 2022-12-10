@@ -13,7 +13,7 @@ except:
     exit(1)
 
 
-# Initialize AI model and Discord Bot
+# Initialise AI model and Discord Bot
 aiModel = AIModel(secrets)
 botPresence = presence.ClientPresence(
     activities=[
@@ -56,6 +56,11 @@ async def help(ctx: interactions.CommandContext):
                 inline=False
             ),
             interactions.EmbedField(
+                name="/initialise",
+                value="Resets my memory, but then initialises me using a premade prompt",
+                inline=False
+            ),
+            interactions.EmbedField(
                 name="/reset",
                 value="Resets my memory, who did you say you were again?",
                 inline=False
@@ -66,9 +71,36 @@ async def help(ctx: interactions.CommandContext):
                 inline=False
             )
         ],
-        footer=interactions.api.models.message.EmbedFooter(text="Virtu v0.0.1-BETA")
+        footer=interactions.EmbedFooter(text="Virtu v0.0.2-BETA")
     )
     await ctx.send(embeds=[helpEmbed], ephemeral=True)
+
+
+initialisationPromptChoices = []
+for initialisationPrompt in aiModel.initialisationPrompts.keys():
+    initialisationPromptChoices.append(interactions.Choice(
+        name=initialisationPrompt,
+        value=initialisationPrompt
+    ))
+
+@bot.command(
+    name='initialise',
+    description='Reset memory and initialise a premade prompt',
+    options=[
+        interactions.Option(
+            name="prompt",
+            description="What prompt do you want to use to initialise the AI?",
+            type=interactions.OptionType.STRING,
+            required=True,
+            choices=initialisationPromptChoices
+        )
+    ]
+)
+async def initialise(ctx: interactions.CommandContext, prompt):
+    message = await ctx.send("> " + prompt + "\nPlease wait...")
+    aiModel.resetMemory()
+    response = aiModel.processInitialisationPrompt(prompt)
+    await message.edit("> " + prompt + "\n" + response)
 
 @bot.command(
     name='chat',
@@ -83,9 +115,10 @@ async def help(ctx: interactions.CommandContext):
     ],
 )
 async def chat(ctx: interactions.CommandContext, prompt):
-    #print("Prompt recieved: " + prompt)
+    message = await ctx.send("> " + prompt + "\nPlease wait...")
+
     response = aiModel.processPrompt(prompt)
-    await ctx.send("> " + prompt + "\n" + response)
+    await message.edit("> " + prompt + "\n" + response)
 
 
 
@@ -100,7 +133,7 @@ async def prefixHandler(message: interactions.api.models.message.Message):
     try:
         # Make message.content actually work (won't work without this)
         channel = await message.get_channel()
-        await channel.get_message(message.id) # This return value isn't even being used but it fixes things???
+        message = await channel.get_message(message.id)
 
         if (message.content[0] == '$'):
             #print("Prompt recieved: " + message.content[1:])
