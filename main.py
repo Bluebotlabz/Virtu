@@ -30,7 +30,7 @@ bot = interactions.Client(token=secrets["token"], presence=botPresence)
 # REGISTER COMMANDS #
 @bot.command(
     name='reset',
-    description="Resets Virtu's memory",
+    description="Reset Virtu's memory",
 )
 async def resetMemory(ctx: interactions.CommandContext):
     aiModel.resetMemory()
@@ -52,17 +52,22 @@ async def help(ctx: interactions.CommandContext):
             ),
             interactions.EmbedField(
                 name="/chat <prompt>",
-                value="Chat with me, I will respond to your prompts and try to answer questions",
+                value="Chat with Virtu. Virtu will respond to your prompts and try to answer questions",
                 inline=False
             ),
             interactions.EmbedField(
                 name="/initialise",
-                value="Resets my memory, but then initialises me using a premade prompt",
+                value="Resets Virtu's memory, but then initialises me using a premade prompt",
                 inline=False
             ),
             interactions.EmbedField(
                 name="/reset",
-                value="Resets my memory, who did you say you were again?",
+                value="Resets Virtu's memory, who did you say you were again?",
+                inline=False
+            ),
+            interactions.EmbedField(
+                name="/history",
+                value="View Virtu's memory",
                 inline=False
             ),
             interactions.EmbedField(
@@ -71,7 +76,7 @@ async def help(ctx: interactions.CommandContext):
                 inline=False
             )
         ],
-        footer=interactions.EmbedFooter(text="Virtu v0.0.2-BETA")
+        footer=interactions.EmbedFooter(text="Virtu v0.0.3-BETA")
     )
     await ctx.send(embeds=[helpEmbed], ephemeral=True)
 
@@ -85,7 +90,7 @@ for initialisationPrompt in aiModel.initialisationPrompts.keys():
 
 @bot.command(
     name='initialise',
-    description='Reset memory and initialise a premade prompt',
+    description='Reset Virtu\'s memory and initialise a premade prompt',
     options=[
         interactions.Option(
             name="prompt",
@@ -120,6 +125,30 @@ async def chat(ctx: interactions.CommandContext, prompt):
     response = aiModel.processPrompt(prompt)
     await message.edit("> " + prompt + "\n" + response)
 
+@bot.command(
+    name='history',
+    description='View Virtu\'s Memory'
+)
+async def chat(ctx: interactions.CommandContext):
+    message = await ctx.send("\nPlease wait...")
+    
+    responses = []
+    responseIndex = 0
+    responseLength = 0
+    for historyItem in aiModel.memory:
+        if (responseLength + len(historyItem) > 2000):
+            responseIndex += 1
+
+        try:
+            responses[responseIndex] += '\n' + historyItem
+        except:
+            responses.append('\n' + historyItem)
+        responseLength += len(historyItem)
+
+    await message.edit(responses[0])
+    for response in responses[1]:
+        await ctx.send(response)
+
 
 
 # EVENT STUFF #
@@ -135,10 +164,10 @@ async def prefixHandler(message: interactions.api.models.message.Message):
         channel = await message.get_channel()
         message = await channel.get_message(message.id)
 
-        if (message.content[0] == '$'):
-            #print("Prompt recieved: " + message.content[1:])
+        if (len(message.content) > 0 and message.content[0] == '$'):
+            returnedMessage = await message.reply("> " + message.content[1:] + "\nPlease wait...")
             response = aiModel.processPrompt(message.content[1:])
-            await message.reply("> " + message.content[1:] + '\n' + response)
+            await returnedMessage.edit("> " + message.content[1:] + '\n' + response)
     except interactions.api.error.LibraryException:
         pass
 
