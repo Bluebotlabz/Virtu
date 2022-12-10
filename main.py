@@ -1,6 +1,8 @@
+import interactions.api.models.presence as presence
 from models import davinci3 as AIModel
 import interactions
 import json
+import time
 
 # External file to store secrets
 try:
@@ -13,7 +15,17 @@ except:
 
 # Initialize AI model and Discord Bot
 aiModel = AIModel(secrets)
-bot = interactions.Client(token=secrets["token"])
+botPresence = presence.ClientPresence(
+    activities=[
+        presence.PresenceActivity(
+            name="Chat With Virtu",
+            type=presence.PresenceActivityType.GAME,
+            application_id=1051152682833936485,
+        )
+    ],
+    status='online'
+)
+bot = interactions.Client(token=secrets["token"], presence=botPresence)
 
 # REGISTER COMMANDS #
 @bot.command(
@@ -22,24 +34,41 @@ bot = interactions.Client(token=secrets["token"])
 )
 async def resetMemory(ctx: interactions.CommandContext):
     aiModel.resetMemory()
-    await ctx.send("`: MEMORY RESET :`")
+    await ctx.send("> MEMORY RESET")
 
 @bot.command(
     name='help',
     description='Plz help me'
 )
 async def help(ctx: interactions.CommandContext):
-    helpMessage = """
-    I am Virtu, I am an AI bot made to diss OpenAI's browser
-    `v0.0.0-ALPHA`
-
-    I have *many* commands which you can use
-
-    /help           - Prints this output
-    /chat <prompt>  - Chat with my brain
-    /reset          - Kill my brain
-    """
-    ctx.send(helpMessage, ephemeral=True)
+    helpEmbed = interactions.Embed(
+        title="Help",
+        color=5793266,
+        fields=[
+            interactions.EmbedField(
+                name="/help",
+                value="Shows this help",
+                inline=False
+            ),
+            interactions.EmbedField(
+                name="/chat <prompt>",
+                value="Chat with me, I will respond to your prompts and try to answer questions",
+                inline=False
+            ),
+            interactions.EmbedField(
+                name="/reset",
+                value="Resets my memory, who did you say you were again?",
+                inline=False
+            ),
+            interactions.EmbedField(
+                name="$ <prompt>",
+                value="Prefix which can be used instead of /chat",
+                inline=False
+            )
+        ],
+        footer=interactions.api.models.message.EmbedFooter(text="Virtu v0.0.1-BETA")
+    )
+    await ctx.send(embeds=[helpEmbed], ephemeral=True)
 
 @bot.command(
     name='chat',
@@ -54,7 +83,7 @@ async def help(ctx: interactions.CommandContext):
     ],
 )
 async def chat(ctx: interactions.CommandContext, prompt):
-    print("Prompt recieved: " + prompt)
+    #print("Prompt recieved: " + prompt)
     response = aiModel.processPrompt(prompt)
     await ctx.send("> " + prompt + "\n" + response)
 
@@ -68,15 +97,17 @@ async def onStart():
 # Prefix compatability for easier usage
 @bot.event(name="on_message_create")
 async def prefixHandler(message: interactions.api.models.message.Message):
-    # Make message.content actually work (won't work without this)
-    channel = await message.get_channel()
-    await channel.get_message(message.id) # This return value isn't even being used but it fixes things???
+    try:
+        # Make message.content actually work (won't work without this)
+        channel = await message.get_channel()
+        await channel.get_message(message.id) # This return value isn't even being used but it fixes things???
 
-    if (message.content[0] == '$'):
-        print("Prompt recieved: " + message.content[1:])
-        response = aiModel.processPrompt(message.content[1:])
-        await message.reply("> " + message.content[1:] + response)
-
+        if (message.content[0] == '$'):
+            #print("Prompt recieved: " + message.content[1:])
+            response = aiModel.processPrompt(message.content[1:])
+            await message.reply("> " + message.content[1:] + '\n' + response)
+    except interactions.api.error.LibraryException:
+        pass
 
 bot.start()
 print("Bot ready")

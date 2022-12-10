@@ -13,7 +13,7 @@ class davinci3():
 
         # Initialize "addons"
         self.memory = [
-            "Assistant is a large language model trained by OpenAI. knowledge cutoff: 2021-09 Current date: December 10 2022 Browsing: disabled"
+            "Virtu is a large language model trained by OpenAI. knowledge cutoff: 2021-09 Current date: December 10 2022 Browsing: disabled"
         ]
 
     # Reset memory
