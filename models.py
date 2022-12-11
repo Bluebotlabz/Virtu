@@ -31,7 +31,7 @@ class davinci3():
         # Define AI Options
         self.defaultConfig = {
             "temperature": 0.5,
-            "max_tokens": 128,
+            "max_tokens": 512,
             "top_p": 1,
             "frequency_penalty": 0,
             "presence_penalty": 0

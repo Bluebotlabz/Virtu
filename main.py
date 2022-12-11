@@ -42,7 +42,8 @@ def getAIModel(guildID, userID, channelID=None, secondaryIDType="perUser"):
 
 # HELP #
 helpEmbed = interactions.Embed(
-    title="Help",
+    title="How To Use Virtu",
+    description="Virtu is an AI-Powered Chatbot.\nVirtu remembers what you told it, it has per-user history unique to each server via / commands, it can also be used in a per-channel mode via the use of $ and $$ prefixes, try using $$help or /help",
     color=5793266,
     fields=[
         interactions.EmbedField(
@@ -84,6 +85,13 @@ helpEmbed = interactions.Embed(
     footer=interactions.EmbedFooter(text="Virtu v0.0.3-BETA")
 )
 
+def quotePrompt(prompt):
+    quotes = []
+    for line in prompt.strip().split('\n'):
+        quotes.append( '> **' + line + '**' )
+
+    return '\n'.join(quotes)
+
 # REGISTER COMMANDS #
 # Reset command
 @bot.command(
@@ -92,7 +100,7 @@ helpEmbed = interactions.Embed(
 )
 async def resetMemory(ctx: interactions.CommandContext):
     getAIModel( ctx.guild_id, ctx.user.id ).resetMemory()
-    await ctx.send("> MEMORY RESET")
+    await ctx.send(">**MEMORY RESET**")
 
 
 # Help Command
@@ -101,7 +109,7 @@ async def resetMemory(ctx: interactions.CommandContext):
     description='Plz help me'
 )
 async def help(ctx: interactions.CommandContext):
-    await ctx.send(content="Virtu is an AI-Powered Chatbot.\nVirtu remembers what you told it, it has per-user history unique to each server via / commands, it can also be used in a per-channel mode via the use of $ and $$ prefixes, try using $$help or /help", embeds=[helpEmbed], ephemeral=True)
+    await ctx.send(content='', embeds=[helpEmbed], ephemeral=True)
 
 
 # Initialise Command
@@ -132,7 +140,7 @@ async def initialise(ctx: interactions.CommandContext, prompt):
     await ctx.defer(False)
     getAIModel( ctx.guild_id, ctx.user.id ).resetMemory()
     response = getAIModel( ctx.guild_id, ctx.user.id ).processInitialisationPrompt(prompt)
-    await ctx.send("> " + prompt + "\n" + response)
+    await ctx.send(quotePrompt(prompt) + "\n\n" + response)
 
 
 # Chat command
@@ -152,7 +160,7 @@ async def chat(ctx: interactions.CommandContext, prompt):
     await ctx.defer(False)
 
     response = getAIModel( ctx.guild_id, ctx.user.id ).processPrompt(prompt)
-    await ctx.send("> " + prompt + "\n" + response)
+    await ctx.send(quotePrompt(prompt) + "\n\n" + response)
 
 # History command
 @bot.command(
@@ -195,32 +203,32 @@ async def prefixHandler(message: interactions.api.models.message.Message):
 
         if (len(message.content) > 0 and message.content[0] == '$'):
             if (message.content[1] == '$'): # Special per-channel command
-                command = message.content.replace('$$', '').strip().split(' ')[0]
+                command = message.content[2:].strip().split(' ')[0]
                 if (command == "help"):
-                    returnedMessage = await message.reply("> " + message.content[1:] + "\nPlease wait...")
-                    await returnedMessage.edit(content="Virtu is an AI-Powered Chatbot.\nVirtu remembers what you told it, it has per-user history unique to each server via / commands, it can also be used in a per-channel mode via the use of $ and $$ prefixes, try using $$help or /help", embeds=[helpEmbed])
+                    returnedMessage = await message.reply(quotePrompt(message.content[2:].strip()) + "\n\nPlease wait...")
+                    await returnedMessage.edit(content='', embeds=[helpEmbed])
 
                 elif (command == "chat"):
-                    returnedMessage = await message.reply("> " + message.content[1:] + "\nPlease wait...")
+                    returnedMessage = await message.reply(quotePrompt(message.content[2:].strip()) + "\n\nPlease wait...")
                     response = getAIModel( message.guild_id, message.author.id, message.channel_id, "perChannel" ).processPrompt(message.content[1:])
                     await returnedMessage.edit("> " + message.content[1:] + '\n' + response)
 
                 elif (command == "reset"):
-                    returnedMessage = await message.reply("> " + message.content[1:] + "\nPlease wait...")
+                    returnedMessage = await message.reply(quotePrompt(message.content[2:].strip()) + "\n\nPlease wait...")
                     response = getAIModel( message.guild_id, message.author.id, message.channel_id, "perChannel" ).resetMemory()
                     await returnedMessage.edit("> MEMORY RESET")
 
                 elif (command == "initialise"):
-                    returnedMessage = await message.reply("> " + message.content[1:] + "\nPlease wait...")
-                    if (' '.join(message.content.replace('$$', '').strip().split(' ')[1:]) in initialisationTextPromptChoices):
+                    returnedMessage = await message.reply(quotePrompt(message.content[2:].strip()) + "\n\nPlease wait...")
+                    if (' '.join(message.content[2:].strip().split(' ')[1:]) in initialisationTextPromptChoices):
                         getAIModel( message.guild_id, message.author.id, message.channel_id, "perChannel" ).resetMemory()
                         response = getAIModel( message.guild_id, message.author.id, message.channel_id, "perChannel" ).processInitialisationPrompt(' '.join(message.content.replace('$$', '').strip().split(' ')[1:]))
-                        await returnedMessage.edit("> " + ' '.join(message.content.replace('$$', '').strip().split(' ')[1:]) + '\n' + response)
+                        await returnedMessage.edit(quotePrompt(' '.join(message.content[2:].strip().split(' ')[1:])) + '\n\n' + response)
                     else:
-                        await returnedMessage.edit("> " + ' '.join(message.content.replace('$$', '').strip().split(' ')[1:]) + '\n' + "Error: No such initialisor")
+                        await returnedMessage.edit(quotePrompt(' '.join(message.content[2:].strip().split(' ')[1:])) + '\n\n' + "Error: No such initialisor")
 
                 elif (command == "history"):
-                    returnedMessage = await message.reply("> " + message.content[1:] + "\nPlease wait...")
+                    returnedMessage = await message.reply(quotePrompt(message.content[2:].strip()) + "\n\nPlease wait...")
                     responses = []
                     responseIndex = 0
                     responseLength = 0
@@ -238,9 +246,9 @@ async def prefixHandler(message: interactions.api.models.message.Message):
                         await message.reply(response)
 
             else:
-                returnedMessage = await message.reply("> " + message.content[1:] + "\nPlease wait...")
+                returnedMessage = await message.reply(quotePrompt(message.content[1:]) + "\n\nPlease wait...")
                 response = getAIModel( message.guild_id, message.author.id, message.channel_id, "perChannel" ).processPrompt(message.content[1:])
-                await returnedMessage.edit("> " + message.content[1:] + '\n' + response)
+                await returnedMessage.edit(quotePrompt(message.content[1:]) + '\n\n' + response)
     except interactions.api.error.LibraryException as e:
         print(e)
 
