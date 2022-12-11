@@ -2,7 +2,7 @@ import interactions.api.models.presence as presence
 from models import davinci3 as AIModel
 import interactions
 import json
-import time
+import os
 
 # External file to store secrets
 try:
@@ -14,7 +14,7 @@ except:
 
 
 # Initialise AI model and Discord Bot
-aiModel = AIModel(secrets)
+#aiModel = AIModel(secrets)
 botPresence = presence.ClientPresence(
     activities=[
         presence.PresenceActivity(
@@ -27,66 +27,88 @@ botPresence = presence.ClientPresence(
 )
 bot = interactions.Client(token=secrets["token"], presence=botPresence)
 
+PerUserAIModels = {}
+PerChannelAIModels = {}
+PerDMAIModels = {}
+
+def getAIModel(guildID, userID, channelID=None, secondaryIDType="perUser"):
+    if (guildID != None):
+        if (secondaryIDType == "perChannel"): # Shared per channel (also works)
+            return PerChannelAIModels.setdefault(guildID, {}).setdefault(channelID, AIModel(secrets))
+        elif (secondaryIDType == "perUser"): # Per user, but on server
+            return PerUserAIModels.setdefault(guildID, {}).setdefault(userID, AIModel(secrets))
+    else:
+        return PerDMAIModels.setdefault(userID, AIModel(secrets))
+
+# HELP #
+helpEmbed = interactions.Embed(
+    title="Help",
+    color=5793266,
+    fields=[
+        interactions.EmbedField(
+            name="/help",
+            value="Shows this help",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="/chat <prompt>",
+            value="Chat with Virtu. Virtu will respond to your prompts and try to answer questions",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="/initialise",
+            value="Resets Virtu's memory, but then initialises me using a premade prompt",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="/reset",
+            value="Resets Virtu's memory, who did you say you were again?",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="/history",
+            value="View Virtu's memory",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="$ <prompt>",
+            value="Prefix which can be used instead of /chat",
+            inline=False
+        )
+    ],
+    footer=interactions.EmbedFooter(text="Virtu v0.0.3-BETA")
+)
+
 # REGISTER COMMANDS #
+# Reset command
 @bot.command(
     name='reset',
     description="Reset Virtu's memory",
 )
 async def resetMemory(ctx: interactions.CommandContext):
-    aiModel.resetMemory()
+    getAIModel( ctx.guild_id, ctx.user.id ).resetMemory()
     await ctx.send("> MEMORY RESET")
 
+
+# Help Command
 @bot.command(
     name='help',
     description='Plz help me'
 )
 async def help(ctx: interactions.CommandContext):
-    helpEmbed = interactions.Embed(
-        title="Help",
-        color=5793266,
-        fields=[
-            interactions.EmbedField(
-                name="/help",
-                value="Shows this help",
-                inline=False
-            ),
-            interactions.EmbedField(
-                name="/chat <prompt>",
-                value="Chat with Virtu. Virtu will respond to your prompts and try to answer questions",
-                inline=False
-            ),
-            interactions.EmbedField(
-                name="/initialise",
-                value="Resets Virtu's memory, but then initialises me using a premade prompt",
-                inline=False
-            ),
-            interactions.EmbedField(
-                name="/reset",
-                value="Resets Virtu's memory, who did you say you were again?",
-                inline=False
-            ),
-            interactions.EmbedField(
-                name="/history",
-                value="View Virtu's memory",
-                inline=False
-            ),
-            interactions.EmbedField(
-                name="$ <prompt>",
-                value="Prefix which can be used instead of /chat",
-                inline=False
-            )
-        ],
-        footer=interactions.EmbedFooter(text="Virtu v0.0.3-BETA")
-    )
     await ctx.send(embeds=[helpEmbed], ephemeral=True)
 
 
+# Initialise Command
+initialisationTextPromptChoices = []
 initialisationPromptChoices = []
-for initialisationPrompt in aiModel.initialisationPrompts.keys():
-    initialisationPromptChoices.append(interactions.Choice(
-        name=initialisationPrompt,
-        value=initialisationPrompt
-    ))
+for promptFile in os.listdir("./initialisationPrompts/"):
+    if (promptFile.split('.')[-1] == 'txt'):
+        initialisationPromptChoices.append(interactions.Choice(
+            name='.'.join(promptFile.split('.')[:-1]),
+            value='.'.join(promptFile.split('.')[:-1])
+        ))
+        initialisationTextPromptChoices.append('.'.join(promptFile.split('.')[:-1]))
 
 @bot.command(
     name='initialise',
@@ -102,11 +124,13 @@ for initialisationPrompt in aiModel.initialisationPrompts.keys():
     ]
 )
 async def initialise(ctx: interactions.CommandContext, prompt):
-    message = await ctx.send("> " + prompt + "\nPlease wait...")
-    aiModel.resetMemory()
-    response = aiModel.processInitialisationPrompt(prompt)
-    await message.edit("> " + prompt + "\n" + response)
+    await ctx.defer(False)
+    getAIModel( ctx.guild_id, ctx.user.id ).resetMemory()
+    response = getAIModel( ctx.guild_id, ctx.user.id ).processInitialisationPrompt(prompt)
+    await ctx.send("> " + prompt + "\n" + response)
 
+
+# Chat command
 @bot.command(
     name='chat',
     description='Chat with Virtu!',
@@ -120,22 +144,22 @@ async def initialise(ctx: interactions.CommandContext, prompt):
     ],
 )
 async def chat(ctx: interactions.CommandContext, prompt):
-    message = await ctx.send("> " + prompt + "\nPlease wait...")
+    await ctx.defer(False)
 
-    response = aiModel.processPrompt(prompt)
-    await message.edit("> " + prompt + "\n" + response)
+    response = getAIModel( ctx.guild_id, ctx.user.id ).processPrompt(prompt)
+    await ctx.send("> " + prompt + "\n" + response)
 
+# History command
 @bot.command(
     name='history',
     description='View Virtu\'s Memory'
 )
-async def chat(ctx: interactions.CommandContext):
-    message = await ctx.send("\nPlease wait...")
-    
+async def viewHistory(ctx: interactions.CommandContext):
+    await ctx.defer(ephemeral=True)
     responses = []
     responseIndex = 0
     responseLength = 0
-    for historyItem in aiModel.memory:
+    for historyItem in getAIModel( ctx.guild_id, ctx.user.id ).memory:
         if (responseLength + len(historyItem) > 2000):
             responseIndex += 1
 
@@ -145,9 +169,9 @@ async def chat(ctx: interactions.CommandContext):
             responses.append('\n' + historyItem)
         responseLength += len(historyItem)
 
-    await message.edit(responses[0])
-    for response in responses[1]:
-        await ctx.send(response)
+    #await ctx.send(responses[0])
+    for response in responses:
+        await ctx.send(response, ephemeral=True)
 
 
 
@@ -165,9 +189,53 @@ async def prefixHandler(message: interactions.api.models.message.Message):
         message = await channel.get_message(message.id)
 
         if (len(message.content) > 0 and message.content[0] == '$'):
-            returnedMessage = await message.reply("> " + message.content[1:] + "\nPlease wait...")
-            response = aiModel.processPrompt(message.content[1:])
-            await returnedMessage.edit("> " + message.content[1:] + '\n' + response)
+            if (message.content[1] == '$'): # Special per-channel command
+                command = message.content.replace('$$', '').strip().split(' ')[0]
+                if (command == "help"):
+                    returnedMessage = await message.reply("> " + message.content[1:] + "\nPlease wait...")
+                    await returnedMessage.edit(content='', embeds=[helpEmbed])
+
+                elif (command == "chat"):
+                    returnedMessage = await message.reply("> " + message.content[1:] + "\nPlease wait...")
+                    response = getAIModel( message.guild_id, message.author.id, message.channel_id, "perChannel" ).processPrompt(message.content[1:])
+                    await returnedMessage.edit("> " + message.content[1:] + '\n' + response)
+
+                elif (command == "reset"):
+                    returnedMessage = await message.reply("> " + message.content[1:] + "\nPlease wait...")
+                    response = getAIModel( message.guild_id, message.author.id, message.channel_id, "perChannel" ).resetMemory()
+                    await returnedMessage.edit("> MEMORY RESET")
+
+                elif (command == "initialise"):
+                    returnedMessage = await message.reply("> " + message.content[1:] + "\nPlease wait...")
+                    if (' '.join(message.content.replace('$$', '').strip().split(' ')[1:]) in initialisationTextPromptChoices):
+                        getAIModel( message.guild_id, message.author.id, message.channel_id, "perChannel" ).resetMemory()
+                        response = getAIModel( message.guild_id, message.author.id, message.channel_id, "perChannel" ).processInitialisationPrompt(' '.join(message.content.replace('$$', '').strip().split(' ')[1:]))
+                        await returnedMessage.edit("> " + ' '.join(message.content.replace('$$', '').strip().split(' ')[1:]) + '\n' + response)
+                    else:
+                        await returnedMessage.edit("> " + ' '.join(message.content.replace('$$', '').strip().split(' ')[1:]) + '\n' + "Error: No such initialisor")
+
+                elif (command == "history"):
+                    returnedMessage = await message.reply("> " + message.content[1:] + "\nPlease wait...")
+                    responses = []
+                    responseIndex = 0
+                    responseLength = 0
+                    for historyItem in getAIModel( message.guild_id, message.author.id, message.channel_id, "perChannel" ).memory:
+                        if (responseLength + len(historyItem) > 2000):
+                            responseIndex += 1
+
+                        try:
+                            responses[responseIndex] += '\n' + historyItem
+                        except:
+                            responses.append('\n' + historyItem)
+                        responseLength += len(historyItem)
+
+                    for response in responses:
+                        await message.reply(response)
+
+            else:
+                returnedMessage = await message.reply("> " + message.content[1:] + "\nPlease wait...")
+                response = getAIModel( message.guild_id, message.author.id, message.channel_id, "perChannel" ).processPrompt(message.content[1:])
+                await returnedMessage.edit("> " + message.content[1:] + '\n' + response)
     except interactions.api.error.LibraryException:
         pass
 
