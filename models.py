@@ -86,11 +86,11 @@ class davinci3():
         except:
             self.config = self.defaultConfig
 
-        print("Using config:", self.config)
+        print("Initialised, Using config:", self.config)
 
         for promptToInitialiseWith in self.initialisationPrompts[prompt]:
             response = self.processPrompt(promptToInitialiseWith)
 
-        print('\n'.join(self.memory))
+        #print('\n'.join(self.memory))
 
         return response

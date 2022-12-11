@@ -72,7 +72,12 @@ helpEmbed = interactions.Embed(
         ),
         interactions.EmbedField(
             name="$ <prompt>",
-            value="Prefix which can be used instead of /chat",
+            value="Prefix which can be used instead of /chat (per channel memory)",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="$$ <command>",
+            value="Prefix which can be used instead of / for per channel memory",
             inline=False
         )
     ],
@@ -96,7 +101,7 @@ async def resetMemory(ctx: interactions.CommandContext):
     description='Plz help me'
 )
 async def help(ctx: interactions.CommandContext):
-    await ctx.send(embeds=[helpEmbed], ephemeral=True)
+    await ctx.send(content="Virtu is an AI-Powered Chatbot.\nVirtu remembers what you told it, it has per-user history unique to each server via / commands, it can also be used in a per-channel mode via the use of $ and $$ prefixes, try using $$help or /help", embeds=[helpEmbed], ephemeral=True)
 
 
 # Initialise Command
@@ -193,7 +198,7 @@ async def prefixHandler(message: interactions.api.models.message.Message):
                 command = message.content.replace('$$', '').strip().split(' ')[0]
                 if (command == "help"):
                     returnedMessage = await message.reply("> " + message.content[1:] + "\nPlease wait...")
-                    await returnedMessage.edit(content='', embeds=[helpEmbed])
+                    await returnedMessage.edit(content="Virtu is an AI-Powered Chatbot.\nVirtu remembers what you told it, it has per-user history unique to each server via / commands, it can also be used in a per-channel mode via the use of $ and $$ prefixes, try using $$help or /help", embeds=[helpEmbed])
 
                 elif (command == "chat"):
                     returnedMessage = await message.reply("> " + message.content[1:] + "\nPlease wait...")
@@ -236,8 +241,8 @@ async def prefixHandler(message: interactions.api.models.message.Message):
                 returnedMessage = await message.reply("> " + message.content[1:] + "\nPlease wait...")
                 response = getAIModel( message.guild_id, message.author.id, message.channel_id, "perChannel" ).processPrompt(message.content[1:])
                 await returnedMessage.edit("> " + message.content[1:] + '\n' + response)
-    except interactions.api.error.LibraryException:
-        pass
+    except interactions.api.error.LibraryException as e:
+        print(e)
 
 bot.start()
 print("Bot ready")
