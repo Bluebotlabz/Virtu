@@ -46,6 +46,7 @@ class davinci3():
     def processPrompt(self, prompt):
         # Add prompt to memory
         self.memory.append("User: " + prompt)
+        self.memory.append("Response: ")
 
         # Haha big brain go brrrrrrr
         completion = openai.Completion.create(
@@ -71,7 +72,7 @@ class davinci3():
         #print("Response: " + response)
 
         # Add response to memory and return it
-        self.memory.append("Response: " + response)
+        self.memory[-1] = "Response: " + response
 
         return response
 
