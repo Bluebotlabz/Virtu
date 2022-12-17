@@ -1,14 +1,18 @@
 import openai
+import time
 import json
 import re
 import os
 
 # Handle all the AI Stuff
 class davinci3():
-    def __init__(self, secrets):
+    def __init__(self, apiKey):
+        self.apiKey = apiKey
+        self.defaultApiKey = apiKey
+
         # Initialise OpenAI
-        openai.api_key = secrets["openai_api_key"]
-        engines = openai.Engine.list()
+        openai.api_key = self.apiKey
+        self.engines = openai.Engine.list()
         ## for engine in engines.data:
         ##     if (engine.object == "engine" and engine.ready):
         ##         print(engine.id)
@@ -38,42 +42,104 @@ class davinci3():
         }
         self.config = self.defaultConfig
 
+        # Timeout stuff
+        self.timeoutReason = ""
+        self.timeout = 0
+
+        # "Premium" Stuff
+        self.premiumMode = False
+
+    # Premium stuff
+    def enablePremiumMode(self, apiKey):
+        if (apiKey != self.defaultApiKey):
+            try:
+                openai.api_key = self.apiKey
+                self.engines = openai.Engine.list()
+                self.premiumMode = True
+                return "Premium Mode Enabled!!!"
+            except:
+                return "Invalid API Key Detected\n`you trying to pull something here?`"
+        else:
+            return "Invalid API Key Detected\n`you trying to pull something here?`"
+
     # Reset memory
     def resetMemory(self):
         self.memory = self.memory[:1]
+    
+    # Import ChatGPT history
+    def importMemory(self, memoryToImport):
+        try:
+            self.resetMemory()
+            currentChatItem = "User: "
+
+            for memoryItem in memoryToImport:
+                self.memory.append(currentChatItem + memoryItem)
+                if (currentChatItem == "User: "):
+                    currentChatItem = "Response: "
+                else:
+                    currentChatItem = "User: "
+
+            if (currentChatItem != "User: "):
+                prompt = self.memory[-1]
+                self.memory = self.memory[:-1]
+                response = self.processPrompt(prompt)
+                response += "\n\n" + "Chat Imported Successfuly"
+            else:
+                reponse = "Chat Imported Successfuly"
+
+            return response
+        except Exception as e:
+            return "Error Importing Chat: " + str(e)
 
     # Actual AI part
     def processPrompt(self, prompt):
+        if (time.time() < self.timeout):
+            return "Timed out - Please wait [" + str(round(self.timeout - time.time())) + "] seconds...\nReason:\n" + self.timeoutReason
+
         # Add prompt to memory
         self.memory.append("User: " + prompt)
         self.memory.append("Response: ")
 
         # Haha big brain go brrrrrrr
-        completion = openai.Completion.create(
-            engine='text-davinci-003',
-            prompt='\n'.join(self.memory), #prompt
-            temperature=self.config["temperature"],
-            max_tokens=self.config["max_tokens"],
-            top_p=self.config["top_p"],
-            frequency_penalty=self.config["frequency_penalty"],
-            presence_penalty=self.config["presence_penalty"],
-        )
+        try:
+            openai.api_key = self.apiKey
+
+            completion = openai.Completion.create(
+                engine='text-davinci-003',
+                prompt='\n'.join(self.memory), #prompt
+                temperature=self.config["temperature"],
+                max_tokens=self.config["max_tokens"],
+                top_p=self.config["top_p"],
+                frequency_penalty=self.config["frequency_penalty"],
+                presence_penalty=self.config["presence_penalty"],
+            )
         
-        response = completion.choices[0].text
-        if (len(response.strip()) >= 9 and response.strip().lower()[:9] == "response: "):
-            response = re.sub('response: ', '', response, 1, re.I)
-        elif (len(response.strip()) >= 9 and response.strip().lower()[:9] == "response:"):
-            response = re.sub('response:', '', response, 1, re.I)
-        elif ("response:" in response.lower()):
-            response = re.sub('response:', '', response, 1, re.I)
+            response = completion.choices[0].text
+            if (len(response.strip()) >= 9 and response.strip().lower()[:9] == "response: "):
+                response = re.sub('response: ', '', response, 1, re.I)
+            elif (len(response.strip()) >= 9 and response.strip().lower()[:9] == "response:"):
+                response = re.sub('response:', '', response, 1, re.I)
+            elif ("response:" in response.lower()):
+                response = re.sub('response:', '', response, 1, re.I)
 
-        response = response.lstrip()
+            response = response.lstrip()
 
-        #print("Response: " + response)
+            #print("Response: " + response)
 
-        # Add response to memory and return it
-        self.memory[-1] = "Response: " + response
+            # Add response to memory and return it
+            self.memory[-1] = "Response: " + response
+        except openai.error.RateLimitError as e:
+            response = "[RATELIMITED - PLEASE WAIT 30 SECONDS]\n`" + str(e) + "`"
+            self.timeout = time.time() + 30
+            self.timeoutReason = "OpenAI rate limited"
+        except openai.error.InvalidRequestError:
+            resonse = "[HISTORY FULL - PLEASE RESET]"
+        except Exception as e:
+            response = "Fatal Error, please report this to the developer: `" + str(e) + "`"
 
+        if (not self.premiumMode):
+            self.timeout = time.time() + 30
+            self.timeoutReason = "--__Remove timeouts with Virtu Premium:__--\nLiterally just provide your own api key, see more info in `/config Premium Mode`"
         return response
 
     def processInitialisationPrompt(self, prompt):
