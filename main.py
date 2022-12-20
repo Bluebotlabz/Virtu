@@ -58,7 +58,7 @@ def getAIModel(guildID, userID, channelID=None, memoryType="perUser"):
     return aiModel
 
 # HELP #
-helpEmbed = interactions.Embed(
+helpEmbedFree = interactions.Embed(
     title="How To Use Virtu",
     description="Virtu is an AI-Powered Chatbot.\nVirtu remembers what you told it, it has per-user history unique to each server via / commands, it can also be used in a per-channel mode via the use of $ and $$ prefixes, try using $$help or /help",
     color=5793266,
@@ -89,17 +89,86 @@ helpEmbed = interactions.Embed(
             inline=False
         ),
         interactions.EmbedField(
-            name="$ <prompt>",
-            value="Prefix which can be used instead of /chat (per channel memory)",
+            name="/config",
+            value="Configure Virtu settings and parameters",
             inline=False
         ),
         interactions.EmbedField(
-            name="$$ <command>",
-            value="Prefix which can be used instead of / for per channel memory",
+            name="$ <prompt>",
+            value="Prefix which can be used instead of /chat (always uses per channel memory)",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="Note",
+            value="Many / commands also have an optional memoryType parameter for you to choose which memory type to use, this can be configured via /config default_memory and is ignored for DMs",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="⭐GET VIRTU PREMIUM⭐",
+            value="⭐Unlock more commands such as /sprudermode, remove all timeouts and help support the bot by using /config virtu_premium⭐",
             inline=False
         )
     ],
-    footer=interactions.EmbedFooter(text="Virtu v0.0.3-BETA")
+    footer=interactions.EmbedFooter(text="Virtu v1.0.0")
+)
+
+helpEmbedPremium = interactions.Embed(
+    title="How To Use Virtu",
+    description="Virtu is an AI-Powered Chatbot.\nVirtu remembers what you told it, it has per-user history unique to each server via / commands, it can also be used in a per-channel mode via the use of $ and $$ prefixes, try using $$help or /help",
+    color=5793266,
+    fields=[
+        interactions.EmbedField(
+            name="/help",
+            value="Shows this help",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="/chat <prompt>",
+            value="Chat with Virtu. Virtu will respond to your prompts and try to answer questions",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="/initialise",
+            value="Resets Virtu's memory, but then initialises me using a premade prompt",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="/reset",
+            value="Resets Virtu's memory, who did you say you were again?",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="/history",
+            value="View Virtu's memory",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="/sprudermode <prompt> <messages>",
+            value="Allow the AI to talk to itself via shared history, <prompt> defines its prompt and <messages> defines the number of messages",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="/config",
+            value="Configure Virtu settings and parameters",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="$ <prompt>",
+            value="Prefix which can be used instead of /chat (always uses per channel memory)",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="Note",
+            value="Many / commands also have an optional memoryType parameter for you to choose which memory type to use, this can be configured via /config default_memory and is ignored for DMs",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="THANK YOU!!!",
+            value="⭐Thank you for providing your API key⭐",
+            inline=False
+        )
+    ],
+    footer=interactions.EmbedFooter(text="Virtu ⭐PREMIUM⭐ v1.0.0")
 )
 
 def quotePrompt(prompt):
@@ -159,8 +228,10 @@ async def resetMemory(ctx: interactions.CommandContext, memoryType='default'):
     description='Plz help me'
 )
 async def help(ctx: interactions.CommandContext):
-    await ctx.send(content='', embeds=[helpEmbed], ephemeral=True)
-
+    if (PerUserSettings.setdefault(ctx.user.id, defaultUserSettings)["premiumMode"]):
+        await ctx.send(content='', embeds=[helpEmbedPremium], ephemeral=True)
+    else:
+        await ctx.send(content='', embeds=[helpEmbedFree], ephemeral=True)
 
 # Initialise Command
 initialisationTextPromptChoices = []
@@ -274,6 +345,10 @@ async def chat(ctx: interactions.CommandContext, prompt, memoryType='default'):
     ],
 )
 async def spruderMode(ctx: interactions.CommandContext, prompt, messages, memoryType='default'):
+    if (not getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, memoryType ).premiumMode):
+        ctx.send("You must have Virtu Premium to use this command\nVirtu premium removes timeouts, allows access to extra commands and more!\n\nGet it via `/config virtu_premium`")
+        return
+
     # Can you please not?
 
     # Loading message
