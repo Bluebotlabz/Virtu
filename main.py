@@ -346,7 +346,7 @@ async def chat(ctx: interactions.CommandContext, prompt, memoryType='default'):
 )
 async def spruderMode(ctx: interactions.CommandContext, prompt, messages, memoryType='default'):
     if (not getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, memoryType ).premiumMode):
-        ctx.send("You must have Virtu Premium to use this command\nVirtu premium removes timeouts, allows access to extra commands and more!\n\nGet it via `/config virtu_premium`")
+        await ctx.send("You must have Virtu Premium to use this command\nVirtu premium removes timeouts, allows access to extra commands and more!\n\nGet it via `/config virtu_premium`")
         return
 
     # Can you please not?
@@ -480,12 +480,12 @@ async def memoryImportJSONModal(ctx, memoryJSON):
     name='config',
     description='Change Virtu Settings',
     options=[
-        interactions.Option(name='virtu_premium', description="virtu_premium", type=interactions.OptionType.SUB_COMMAND),
-        interactions.Option(name='default_memory', description="default_memory", type=interactions.OptionType.SUB_COMMAND),
-        interactions.Option(name='wipe_data', description="wipe_data", type=interactions.OptionType.SUB_COMMAND),
-        interactions.Option(name='ai_model', description="ai_model", type=interactions.OptionType.SUB_COMMAND, options=[interactions.Option(name="memory_type",converter="memorytype",description="Which memory/chat history should this command affect?",type=interactions.OptionType.STRING,required=False,choices=[interactions.Choice(name='Per-Channel History', value='perChannel'),interactions.Choice(name='Per-User History', value='perUser')] )]),
-        interactions.Option(name='ai_parameters', description="ai_parameters", type=interactions.OptionType.SUB_COMMAND, options=[interactions.Option(name="memory_type",converter="memorytype",description="Which memory/chat history should this command affect?",type=interactions.OptionType.STRING,required=False,choices=[interactions.Choice(name='Per-Channel History', value='perChannel'),interactions.Choice(name='Per-User History', value='perUser')] )]),
-        interactions.Option(name='reset_ai_parameters', description="reset_ai_parameters", type=interactions.OptionType.SUB_COMMAND, options=[interactions.Option(name="memory_type",converter="memorytype",description="Which memory/chat history should this command affect?",type=interactions.OptionType.STRING,required=False,choices=[interactions.Choice(name='Per-Channel History', value='perChannel'),interactions.Choice(name='Per-User History', value='perUser')] )]),
+        interactions.Option(name='virtu_premium', description="⭐VIRTU PREMIUM⭐", type=interactions.OptionType.SUB_COMMAND),
+        interactions.Option(name='default_memory', description="Configure Default Memory Used For / Commands", type=interactions.OptionType.SUB_COMMAND),
+        interactions.Option(name='wipe_data', description="Wipe All Virtu Data", type=interactions.OptionType.SUB_COMMAND),
+        interactions.Option(name='ai_model', description="Change Virtu's AI Model", type=interactions.OptionType.SUB_COMMAND, options=[interactions.Option(name="memory_type",converter="memorytype",description="Which memory/chat history should this command affect?",type=interactions.OptionType.STRING,required=False,choices=[interactions.Choice(name='Per-Channel History', value='perChannel'),interactions.Choice(name='Per-User History', value='perUser')] )]),
+        interactions.Option(name='ai_parameters', description="Adjust Virtu's AI Model Parameters", type=interactions.OptionType.SUB_COMMAND, options=[interactions.Option(name="memory_type",converter="memorytype",description="Which memory/chat history should this command affect?",type=interactions.OptionType.STRING,required=False,choices=[interactions.Choice(name='Per-Channel History', value='perChannel'),interactions.Choice(name='Per-User History', value='perUser')] )]),
+        interactions.Option(name='reset_ai_parameters', description="Reset Virtu's AI Model Parameters", type=interactions.OptionType.SUB_COMMAND, options=[interactions.Option(name="memory_type",converter="memorytype",description="Which memory/chat history should this command affect?",type=interactions.OptionType.STRING,required=False,choices=[interactions.Choice(name='Per-Channel History', value='perChannel'),interactions.Choice(name='Per-User History', value='perUser')] )]),
     ]
 )
 async def configCommand(ctx: interactions.CommandContext, sub_command, memorytype="default"):
@@ -512,7 +512,7 @@ async def configCommand(ctx: interactions.CommandContext, sub_command, memorytyp
                     label="Enter API Key"
                 )
             ]
-            await ctx.send('__Virtu Premium__\nClick on the button and enter your API key to enable Virtu Premium', components=components)
+            await ctx.send('__Virtu Premium__\nClick on the button and enter your API key to enable Virtu Premium\n\nYou can generate an API Key (also known as a "secret key") here: https://beta.openai.com/account/api-keys', components=components)
     elif (sub_command == "default_memory"):
         components = [
             interactions.SelectMenu(
