@@ -742,53 +742,8 @@ async def prefixHandler(message: interactions.api.models.message.Message):
         message = await channel.get_message(message.id)
 
         if (len(message.content) > 0 and message.content[0] == '$'):
-            if (message.content[1] == '$'): # Special per-channel command
-                command = message.content[2:].strip().split(' ')[0]
-                if (command == "help"):
-                    returnedMessage = await message.reply(quotePrompt(message.content[2:].strip()) + "\n\nPlease wait...")
-                    await returnedMessage.edit(content='', embeds=[helpEmbed])
-
-                elif (command == "chat"):
-                    returnedMessage = await message.reply(quotePrompt(message.content[2:].strip()) + "\n\nPlease wait...")
-                    response = getAIModel( message.guild_id, message.author.id, message.channel_id, "perChannel" ).processPrompt(message.content[1:])
-
-                    responses = splitMessage(response)
-                    await returnedMessage.edit("> " + message.content[1:] + '\n' + responses[0])
-                    for response in responses[1:]:
-                        channel = await message.get_channel()
-                        await channel.send(response)
-
-                elif (command == "reset"):
-                    returnedMessage = await message.reply(quotePrompt(message.content[2:].strip()) + "\n\nPlease wait...")
-                    response = getAIModel( message.guild_id, message.author.id, message.channel_id, "perChannel" ).resetMemory()
-                    await returnedMessage.edit("> MEMORY RESET")
-
-                elif (command == "initialise"):
-                    returnedMessage = await message.reply(quotePrompt(message.content[2:].strip()) + "\n\nPlease wait...")
-                    if (' '.join(message.content[2:].strip().split(' ')[1:]) in initialisationTextPromptChoices):
-                        getAIModel( message.guild_id, message.author.id, message.channel_id, "perChannel" ).resetMemory()
-                        response = getAIModel( message.guild_id, message.author.id, message.channel_id, "perChannel" ).processInitialisationPrompt(' '.join(message.content.replace('$$', '').strip().split(' ')[1:]))
-                        responses = splitMessage(response)
-
-                        await returnedMessage.edit(quotePrompt(' '.join(message.content[2:].strip().split(' ')[1:])) + '\n\n' + responses[0])
-                        for response in responses[1:]:
-                            channel = await message.get_channel()
-                            await channel.send(response)
-                    else:
-                        await returnedMessage.edit(quotePrompt(' '.join(message.content[2:].strip().split(' ')[1:])) + '\n\n' + "Error: No such initialisor")
-
-                elif (command == "history"):
-                    returnedMessage = await message.reply(quotePrompt(message.content[2:].strip()) + "\n\nPlease wait...")
-                    response = ''
-                    for historyItem in getAIModel( message.guild_id, message.author.id, message.channel_id, "perChannel" ).memory:
-                        response += '\n' + historyItem
-
-                    responses = splitMessage(response)
-                    await returnedMessage.edit(responses[0])
-                    for response in responses[1:]:
-                        channel = await message.get_channel()
-                        await channel.send(response)
-
+            if (len(message.content) > 1 and message.content[1] == '$'):
+                message.reply("You are trying to use a legacy per-channel command, this has been replaced by an optional argument in / commands, see `/help` for more info")
             else:
                 returnedMessage = await message.reply(quotePrompt(message.content[1:]) + "\n\nPlease wait...")
                 response = getAIModel( guildID, message.author.id, channel.id, "perChannel" ).processPrompt(message.content[1:])
