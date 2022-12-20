@@ -1,7 +1,8 @@
 import interactions.api.models.presence as presence
-from models import davinci3 as AIModel
+from models import OpenAICompletionModel as AIModel
 import interactions
 import json
+import time
 import os
 
 # External file to store secrets
@@ -358,7 +359,7 @@ async def importHistory(ctx: interactions.CommandContext, jsonChat=None, memoryT
     components = [
         interactions.Button(
             style=interactions.ButtonStyle.PRIMARY,
-            custom_id="virtu.memory.import.importJSONButton." + memoryType,
+            custom_id="virtu.memory.import.importJSONButton:" + memoryType,
             label="Import JSON History"
         )
     ]
@@ -366,79 +367,32 @@ async def importHistory(ctx: interactions.CommandContext, jsonChat=None, memoryT
     await ctx.send("Use the following command in the JS console to extract chatGPT code:\n`" + jsCommand + "`\n\nThen press the button below:", components=components)
 
 ### START IMPORT
-@bot.component("virtu.memory.import.importJSONButton.default")
+@bot.component("virtu.memory.import.importJSONButton:perChannel")
+@bot.component("virtu.memory.import.importJSONButton:perUser")
+@bot.component("virtu.memory.import.importJSONButton:default")
 async def memoryImportJSONButton(ctx):
     modal = interactions.Modal(
         title="Import Memory",
-        custom_id="virtu.memory.import.importJSONmodal.default",
+        custom_id="virtu.memory.import.importJSONmodal:" + ctx.data.custom_id.split(':')[-1],
         components=[
             interactions.TextInput(
                 style=interactions.TextStyleType.SHORT,
                 custom_id="virtu.memory.import.importJSONModal.JSONText",
                 label="Memory JSON",
-                placeholder="Memory JSON"
+                placeholder="Memory JSON",
+                required=True
             )
         ]
     )
 
     await ctx.popup(modal)
 
-@bot.component("virtu.memory.import.importJSONButton.perUser")
-async def memoryImportJSONButton(ctx):
-    modal = interactions.Modal(
-        title="Import Memory",
-        custom_id="virtu.memory.import.importJSONmodal.perUser",
-        components=[
-            interactions.TextInput(
-                style=interactions.TextStyleType.SHORT,
-                custom_id="virtu.memory.import.importJSONModal.JSONText",
-                label="Memory JSON",
-                placeholder="Memory JSON"
-            )
-        ]
-    )
-
-    await ctx.popup(modal)
-
-@bot.component("virtu.memory.import.importJSONButton.perChannel")
-async def memoryImportJSONButton(ctx):
-    modal = interactions.Modal(
-        title="Import Memory",
-        custom_id="virtu.memory.import.importJSONmodal.perChannel",
-        components=[
-            interactions.TextInput(
-                style=interactions.TextStyleType.SHORT,
-                custom_id="virtu.memory.import.importJSONModal.JSONText",
-                label="Memory JSON",
-                placeholder="Memory JSON"
-            )
-        ]
-    )
-
-    await ctx.popup(modal)
-
-@bot.modal("virtu.memory.import.importJSONmodal.default")
+@bot.modal("virtu.memory.import.importJSONmodal:perChannel")
+@bot.modal("virtu.memory.import.importJSONmodal:perMemory")
+@bot.modal("virtu.memory.import.importJSONmodal:default")
 async def memoryImportJSONModal(ctx, memoryJSON):
     try:
-        response = getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, "default" ).importMemory(json.loads(memoryJSON))
-    except Exception as e:
-        response = "Error Importing Chat: " + str(e)
-
-    await ctx.send(response)
-
-@bot.modal("virtu.memory.import.importJSONmodal.perChannel")
-async def memoryImportJSONModal(ctx, memoryJSON):
-    try:
-        response = getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, "perChannel" ).importMemory(json.loads(memoryJSON))
-    except Exception as e:
-        response = "Error Importing Chat: " + str(e)
-
-    await ctx.send(response)
-
-@bot.modal("virtu.memory.import.importJSONmodal.perMemory")
-async def memoryImportJSONModal(ctx, memoryJSON):
-    try:
-        response = getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, "perMemory" ).importMemory(json.loads(memoryJSON))
+        response = getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, ctx.data.custom_id.split(':')[-1] ).importMemory(json.loads(memoryJSON))
     except Exception as e:
         response = "Error Importing Chat: " + str(e)
 
@@ -456,6 +410,7 @@ async def memoryImportJSONModal(ctx, memoryJSON):
         interactions.Option(name='wipe_data', description="wipe_data", type=interactions.OptionType.SUB_COMMAND),
         interactions.Option(name='ai_model', description="ai_model", type=interactions.OptionType.SUB_COMMAND, options=[interactions.Option(name="memory_type",converter="memorytype",description="Which memory/chat history should this command affect?",type=interactions.OptionType.STRING,required=False,choices=[interactions.Choice(name='Per-Channel History', value='perChannel'),interactions.Choice(name='Per-User History', value='perUser')] )]),
         interactions.Option(name='ai_parameters', description="ai_parameters", type=interactions.OptionType.SUB_COMMAND, options=[interactions.Option(name="memory_type",converter="memorytype",description="Which memory/chat history should this command affect?",type=interactions.OptionType.STRING,required=False,choices=[interactions.Choice(name='Per-Channel History', value='perChannel'),interactions.Choice(name='Per-User History', value='perUser')] )]),
+        interactions.Option(name='reset_ai_parameters', description="reset_ai_parameters", type=interactions.OptionType.SUB_COMMAND, options=[interactions.Option(name="memory_type",converter="memorytype",description="Which memory/chat history should this command affect?",type=interactions.OptionType.STRING,required=False,choices=[interactions.Choice(name='Per-Channel History', value='perChannel'),interactions.Choice(name='Per-User History', value='perUser')] )]),
     ]
 )
 async def configCommand(ctx: interactions.CommandContext, sub_command, memorytype="default"):
@@ -507,15 +462,15 @@ async def configCommand(ctx: interactions.CommandContext, sub_command, memorytyp
         await ctx.send('__WIPE DATA__\nWipe All Your Conversation Histories, Settings And All User Data\n**__THIS CANNOT BE UNDONE__**', components=components)
     elif (sub_command == "ai_model"):
         availableModels = {
-            "text-davinci-003": "text-davinci-003;" + memorytype,
-            "text-davinci-002": "text-davinci-002;" + memorytype,
-            "text-davinci-001": "text-davinci-001;" + memorytype,
-            "cushman-codex": "code-cushman-001;" + memorytype,
-            "davinci-codex": "code-davinci-002;" + memorytype,
-            "Base GPT-3 Babbage": "babbage;" + memorytype,
-            "Base GPT-3 Curie": "curie;" + memorytype,
-            "Base GPT-3 Ada": "ada;" + memorytype,
-            "Base GPT-3 DaVinci": "davinci;" + memorytype
+            "text-davinci-003": "text-davinci-003:" + memorytype,
+            "text-davinci-002": "text-davinci-002:" + memorytype,
+            "text-davinci-001": "text-davinci-001:" + memorytype,
+            "cushman-codex": "code-cushman-001:" + memorytype,
+            "davinci-codex": "code-davinci-002:" + memorytype,
+            "Base GPT-3 Babbage": "babbage:" + memorytype,
+            "Base GPT-3 Curie": "curie:" + memorytype,
+            "Base GPT-3 Ada": "ada:" + memorytype,
+            "Base GPT-3 DaVinci": "davinci:" + memorytype
         }
 
         modelOptions = []
@@ -531,6 +486,103 @@ async def configCommand(ctx: interactions.CommandContext, sub_command, memorytyp
             )
         ]
         await ctx.send('__AI Model__\nWhich OpenAI model do you want Virtu to use?\nMore info: https://beta.openai.com/docs/models/overview\n`Default: text-davinci-003`', components=components)
+    elif (sub_command == "ai_parameters"):
+        configOptions = getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, memorytype ).config
+        components = []
+        for configOption in configOptions.keys():
+            if (not configOption in ["engine", "useMemory"]):
+                components.append(interactions.Button(style=interactions.ButtonStyle.PRIMARY, label=configOption, custom_id="virtu.config.aiParameters.parameter:" + configOption + ":" + memorytype))
+
+        await ctx.send("__AI Parameters__\nClick on a button to change any of the AI Model's parameters", components=components)
+    elif (sub_command == "reset_ai_parameters"):
+        components = [
+            interactions.Button(
+                style=interactions.ButtonStyle.DANGER,
+                custom_id="virtu.config.aiParameters.resetParameters:" + memorytype,
+                label="RESET AI PARAMETERS"
+            )
+        ]
+        await ctx.send('__RESET AI PARAMETERS__\nResets your AI Model\'s parameters\n**__THIS CANNOT BE UNDONE__**', components=components)
+
+### START AI PARAMETERS
+@bot.component("virtu.config.aiParameters.parameter:temperature:default")
+@bot.component("virtu.config.aiParameters.parameter:max_tokens:default")
+@bot.component("virtu.config.aiParameters.parameter:top_p:default")
+@bot.component("virtu.config.aiParameters.parameter:frequency_penalty:default")
+@bot.component("virtu.config.aiParameters.parameter:presence_penalty:default")
+@bot.component("virtu.config.aiParameters.parameter:temperature:perChannel")
+@bot.component("virtu.config.aiParameters.parameter:max_tokens:perChannel")
+@bot.component("virtu.config.aiParameters.parameter:top_p:perChannel")
+@bot.component("virtu.config.aiParameters.parameter:frequency_penalty:perChannel")
+@bot.component("virtu.config.aiParameters.parameter:presence_penalty:perChannel")
+@bot.component("virtu.config.aiParameters.parameter:temperature:perUser")
+@bot.component("virtu.config.aiParameters.parameter:max_tokens:perUser")
+@bot.component("virtu.config.aiParameters.parameter:top_p:perUser")
+@bot.component("virtu.config.aiParameters.parameter:frequency_penalty:perUser")
+@bot.component("virtu.config.aiParameters.parameter:presence_penalty:perUser")
+async def handleAIParameterChange(ctx):
+    parameterToChange = ctx.data.custom_id.split(':')[-2]
+    memoryType = ctx.data.custom_id.split(':')[-1]
+
+    modal = interactions.Modal(
+        title="Change " + parameterToChange,
+        custom_id="virtu.config.aiParameters.parameter.modal:" + parameterToChange + ":" + memoryType,
+        components=[
+            interactions.TextInput(style=interactions.TextStyleType.SHORT, label=parameterToChange, custom_id="virtu.config.aiParameters.parameter.textInput", required=True)
+        ]
+    )
+
+    await ctx.popup(modal)
+
+@bot.modal("virtu.config.aiParameters.parameter.modal:temperature:default")
+@bot.modal("virtu.config.aiParameters.parameter.modal:max_tokens:default")
+@bot.modal("virtu.config.aiParameters.parameter.modal:top_p:default")
+@bot.modal("virtu.config.aiParameters.parameter.modal:frequency_penalty:default")
+@bot.modal("virtu.config.aiParameters.parameter.modal:presence_penalty:default")
+@bot.modal("virtu.config.aiParameters.parameter.modal:temperature:perChannel")
+@bot.modal("virtu.config.aiParameters.parameter.modal:max_tokens:perChannel")
+@bot.modal("virtu.config.aiParameters.parameter.modal:top_p:perChannel")
+@bot.modal("virtu.config.aiParameters.parameter.modal:frequency_penalty:perChannel")
+@bot.modal("virtu.config.aiParameters.parameter.modal:presence_penalty:perChannel")
+@bot.modal("virtu.config.aiParameters.parameter.modal:temperature:perUser")
+@bot.modal("virtu.config.aiParameters.parameter.modal:max_tokens:perUser")
+@bot.modal("virtu.config.aiParameters.parameter.modal:top_p:perUser")
+@bot.modal("virtu.config.aiParameters.parameter.modal:frequency_penalty:perUser")
+@bot.modal("virtu.config.aiParameters.parameter.modal:presence_penalty:perUser")
+async def handleAIParameterModalResponse(ctx, parameterResult):
+    parameterToChange = ctx.data.custom_id.split(':')[-2]
+    memoryType = ctx.data.custom_id.split(':')[-1]
+    
+    inputTypes = {
+        "temperature": (0, 1, 'float'),
+        "top_p": (0, 1, 'float'),
+        "frequency_penalty": (-2, 2, 'float'),
+        "presence_penalty": (-2, 2, 'float')
+    }
+
+    if (inputTypes[parameterToChange][-1] == 'float'):
+        try:
+            if (float(parameterResult) >= inputTypes[parameterToChange][0] and int(parameterResult) <= inputTypes[parameterToChange][1]):
+                getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, memoryType ).config[parameterToChange] = float(parameterResult)
+                response = "[" + parameterToChange + "] successfuly set to [" + parameterResult + "]"
+            else:
+                response = "Error, invalid value, value must be a float between [" + str(inputTypes[parameterToChange][0]) + "] and [" + str(inputTypes[parameterToChange][1]) + "]\n`Did you even read the docs?`"
+        except:
+            response = "Error, invalid value, value must be a float between [" + str(inputTypes[parameterToChange][0]) + "] and [" + str(inputTypes[parameterToChange][1]) + "]\n`Did you even read the docs?`"
+
+    await ctx.send(response, ephemeral=True)
+
+### END AI PARAMETERS
+
+### START WIPE AI PARAMETERS
+@bot.component("virtu.config.aiParameters.resetParameters:default")
+@bot.component("virtu.config.aiParameters.resetParameters:perUser")
+@bot.component("virtu.config.aiParameters.resetParameters:perChannel")
+async def wipeUserData(ctx):
+    memoryType = ctx.data.custom_id.split(':')[-1]
+    getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, memoryType ).config = getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, memoryType ).defaultConfig
+    await ctx.send("All AI Model Parameter Settings have been wiped\n`what did you do now?`", ephemeral=True)
+### END WIPE AI PARAMETERS
 
 ### START VIRTU PREMIUM
 @bot.component("virtu.config.premium.openModal")
@@ -543,7 +595,8 @@ async def premiumModeModalButton(ctx):
                 style=interactions.TextStyleType.SHORT,
                 custom_id="virtu.config.premium.apiModal.apiKey",
                 label="API Key",
-                placeholder="API Key"
+                placeholder="API Key",
+                required=True
             )
         ]
     )
@@ -561,6 +614,9 @@ async def virtuPremiumModalResponse(ctx, premiumModeAPIKey):
     if (getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, 'default' ).enablePremiumMode(premiumModeAPIKey)):
         PerUserSettings.setdefault(ctx.user.id, defaultUserSettings)["premiumMode"] = True
         PerUserSettings.setdefault(ctx.user.id, defaultUserSettings)["apiKey"] = premiumModeAPIKey
+        getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, 'default' ).timeout = time.time()
+        getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, 'perUser' ).timeout = time.time()
+        getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, 'perChannel' ).timeout = time.time()
         await ctx.send("Premium Mode Enabled!!!", ephemeral=True)
     else:
         await ctx.send("Invalid API Key Detected\n`you trying to pull something here?`", ephemeral=True)
@@ -585,7 +641,7 @@ async def wipeUserData(ctx):
 ### START AI MODEL
 @bot.component("virtu.config.aimodel")
 async def changeAIModel(ctx, modelSelection):
-    getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, modelSelection[0].split(';')[1] ).config["engine"] = modelSelection[0].split(';')[0]
+    getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, modelSelection[0].split(':')[-1] ).config["engine"] = modelSelection[0].split(';')[0]
     await ctx.send("AI Model Updated")
 ### END AI MODEL
 

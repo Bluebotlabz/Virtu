@@ -5,7 +5,7 @@ import re
 import os
 
 # Handle all the AI Stuff
-class davinci3():
+class OpenAICompletionModel():
     def __init__(self, apiKey):
         self.apiKey = apiKey
         self.defaultApiKey = apiKey
@@ -36,7 +36,7 @@ class davinci3():
 
         # Define AI Options
         self.defaultConfig = {
-            "engine": " text-davinci-003",
+            "engine": "text-davinci-003",
             "temperature": 0.5,
             "max_tokens": 512,
             "top_p": 1,
@@ -106,8 +106,8 @@ class davinci3():
         self.memory.append("Response: ")
 
         # Haha big brain go brrrrrrr
+        error = True
         try:
-            print("Using engine:",self.config["engine"])
             openai.api_key = self.apiKey
 
             completion = openai.Completion.create(
@@ -134,16 +134,18 @@ class davinci3():
 
             # Add response to memory and return it
             self.memory[-1] = "Response: " + response
+            error = False
         except openai.error.RateLimitError as e:
             response = "[RATELIMITED - PLEASE WAIT 30 SECONDS]\n`" + str(e) + "`"
             self.timeout = time.time() + 30
             self.timeoutReason = "OpenAI rate limited"
-        except openai.error.InvalidRequestError:
-            resonse = "[HISTORY FULL - PLEASE RESET]"
+        except openai.error.InvalidRequestError as e:
+            print(e)
+            response = "[HISTORY FULL - PLEASE RESET]"
         except Exception as e:
             response = "Fatal Error, please report this to the developer: `" + str(e) + "`"
 
-        if (not self.premiumMode):
+        if (not self.premiumMode and not error):
             self.timeout = time.time() + 30
             self.timeoutReason = "--__Remove timeouts with Virtu Premium:__--\nLiterally just provide your own api key, see more info in `/config Premium Mode`"
         return response
