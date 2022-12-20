@@ -74,11 +74,6 @@ helpEmbedFree = interactions.Embed(
             inline=False
         ),
         interactions.EmbedField(
-            name="/initialise",
-            value="Resets Virtu's memory, but then initialises me using a premade prompt",
-            inline=False
-        ),
-        interactions.EmbedField(
             name="/reset",
             value="Resets Virtu's memory, who did you say you were again?",
             inline=False
@@ -89,13 +84,28 @@ helpEmbedFree = interactions.Embed(
             inline=False
         ),
         interactions.EmbedField(
-            name="/config",
+            name="/config <config option>",
             value="Configure Virtu settings and parameters",
             inline=False
         ),
         interactions.EmbedField(
             name="$ <prompt>",
             value="Prefix which can be used instead of /chat (always uses per channel memory)",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="⭐ /initialise <initialiser>",
+            value="[REQUIRES VIRUT PREMIUM] Resets Virtu's memory, but then initialises it using a premade prompt",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="⭐ /retry",
+            value="[REQUIRES VIRTU PREMIUM] Retry the last prompt, same a ChatGPT \"try again\" button",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="⭐ /sprudermode <prompt> <messages>",
+            value="[REQUIRES VIRTU PREMIUM] Allow the AI to talk to itself via shared history, <prompt> defines its prompt and <messages> defines the number of messages",
             inline=False
         ),
         interactions.EmbedField(
@@ -128,11 +138,6 @@ helpEmbedPremium = interactions.Embed(
             inline=False
         ),
         interactions.EmbedField(
-            name="/initialise",
-            value="Resets Virtu's memory, but then initialises me using a premade prompt",
-            inline=False
-        ),
-        interactions.EmbedField(
             name="/reset",
             value="Resets Virtu's memory, who did you say you were again?",
             inline=False
@@ -143,18 +148,28 @@ helpEmbedPremium = interactions.Embed(
             inline=False
         ),
         interactions.EmbedField(
-            name="/sprudermode <prompt> <messages>",
-            value="Allow the AI to talk to itself via shared history, <prompt> defines its prompt and <messages> defines the number of messages",
-            inline=False
-        ),
-        interactions.EmbedField(
-            name="/config",
+            name="/config <config option>",
             value="Configure Virtu settings and parameters",
             inline=False
         ),
         interactions.EmbedField(
             name="$ <prompt>",
             value="Prefix which can be used instead of /chat (always uses per channel memory)",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="/initialise <initialiser>",
+            value="[WARNING: CAN USE A LOT OF API QUOTA] Resets Virtu's memory, but then initialises it using a premade prompt",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="/retry",
+            value="Retry the last prompt, same a ChatGPT \"try again\" button",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="/sprudermode <prompt> <messages>",
+            value="[WARNING: USES A LOT OF API QUOTA] Allow the AI to talk to itself via shared history, <prompt> defines its prompt and <messages> defines the number of messages",
             inline=False
         ),
         interactions.EmbedField(
@@ -269,6 +284,10 @@ for promptFile in os.listdir("./initialisationPrompts/"):
     ]
 )
 async def initialise(ctx: interactions.CommandContext, prompt, memoryType='default'):
+    if (not getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, memoryType ).premiumMode):
+        await ctx.send("You must have Virtu Premium to use this command\nVirtu premium removes timeouts, allows access to extra commands and more!\n\nGet it via `/config virtu_premium`")
+        return
+
     await ctx.defer(False)
     getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, memoryType ).resetMemory()
     response = getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, memoryType ).processInitialisationPrompt(prompt)
@@ -406,6 +425,42 @@ async def viewHistory(ctx: interactions.CommandContext, memoryType='default'):
     #await ctx.send(responses[0])
     for response in responses:
             await ctx.send(response, ephemeral=True)
+
+# Try-again command
+@bot.command(
+    name='retry',
+    description='Regenerate the last prompt',
+    options=[
+        interactions.Option(
+            name="memory-type",
+            converter="memoryType",
+            description="Which memory/chat history should this command affect?",
+            type=interactions.OptionType.STRING,
+            required=False,
+            choices=[
+                interactions.Choice(name='Per-Channel History', value='perChannel'),
+                interactions.Choice(name='Per-User History', value='perUser')
+            ]
+        )
+    ]
+)
+async def redoPrompt(ctx: interactions.CommandContext, memoryType='default'):
+    if (not getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, memoryType ).premiumMode):
+        await ctx.send("You must have Virtu Premium to use this command\nVirtu premium removes timeouts, allows access to extra commands and more!\n\nGet it via `/config virtu_premium`")
+        return
+
+    await ctx.defer(ephemeral=True)
+
+    lastPrompt = getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, memoryType ).memory[-2]
+    getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, memoryType ).memory = getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, memoryType ).memory[:-2]
+    
+    response = getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, memoryType ).processPrompt(lastPrompt)
+
+    responses = splitMessage(response)
+    await ctx.send(quotePrompt(lastPrompt) + "\n\n" + responses[0])
+    channel = await ctx.get_channel()
+    for response in responses[1:]:
+        channel.send(response)
 
 # Chat import command
 @bot.command(
