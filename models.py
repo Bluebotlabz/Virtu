@@ -13,9 +13,11 @@ class davinci3():
         # Initialise OpenAI
         openai.api_key = self.apiKey
         self.engines = openai.Engine.list()
-        ## for engine in engines.data:
-        ##     if (engine.object == "engine" and engine.ready):
-        ##         print(engine.id)
+        ##for engine in self.engines.data:
+        ##    if (engine.object == "engine" and engine.ready):
+        ##        print(engine.id)
+        ##    else:
+        ##        pass
 
         # Initialise "addons"
         self.memory = [
@@ -34,11 +36,13 @@ class davinci3():
 
         # Define AI Options
         self.defaultConfig = {
+            "engine": " text-davinci-003",
             "temperature": 0.5,
             "max_tokens": 512,
             "top_p": 1,
             "frequency_penalty": 0,
-            "presence_penalty": 0
+            "presence_penalty": 0,
+            "useMemory": True
         }
         self.config = self.defaultConfig
 
@@ -53,14 +57,15 @@ class davinci3():
     def enablePremiumMode(self, apiKey):
         if (apiKey != self.defaultApiKey):
             try:
-                openai.api_key = self.apiKey
+                openai.api_key = apiKey
                 self.engines = openai.Engine.list()
                 self.premiumMode = True
-                return "Premium Mode Enabled!!!"
+                self.apiKey = apiKey
+                return True
             except:
-                return "Invalid API Key Detected\n`you trying to pull something here?`"
+                return False
         else:
-            return "Invalid API Key Detected\n`you trying to pull something here?`"
+            return False
 
     # Reset memory
     def resetMemory(self):
@@ -85,7 +90,7 @@ class davinci3():
                 response = self.processPrompt(prompt)
                 response += "\n\n" + "Chat Imported Successfuly"
             else:
-                reponse = "Chat Imported Successfuly"
+                response = "Chat Imported Successfuly"
 
             return response
         except Exception as e:
@@ -102,10 +107,11 @@ class davinci3():
 
         # Haha big brain go brrrrrrr
         try:
+            print("Using engine:",self.config["engine"])
             openai.api_key = self.apiKey
 
             completion = openai.Completion.create(
-                engine='text-davinci-003',
+                engine=self.config["engine"],
                 prompt='\n'.join(self.memory), #prompt
                 temperature=self.config["temperature"],
                 max_tokens=self.config["max_tokens"],
