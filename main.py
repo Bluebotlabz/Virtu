@@ -201,7 +201,7 @@ def splitMessage(text):
     responseLength = 0
 
     for line in text.strip().split('\n'):
-        if (responseLength + len(line) > 2000 or (line == text.strip().split('\n')[0] and responseLength + len(line) > 1500)):
+        if (responseLength + len(line) >= 2000 or (line == text.strip().split('\n')[0] and responseLength + len(line) >= 1500)):
             responseIndex += 1
 
         try:
