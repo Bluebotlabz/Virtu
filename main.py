@@ -771,7 +771,7 @@ async def wipeUserData(ctx):
 ### START AI MODEL
 @bot.component("virtu.config.aimodel")
 async def changeAIModel(ctx, modelSelection):
-    getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, modelSelection[0].split(':')[-1] ).config["engine"] = modelSelection[0].split(';')[0]
+    getAIModel( ctx.guild_id, ctx.user.id, ctx.channel_id, modelSelection[0].split(':')[-1] ).config["engine"] = modelSelection[0].split(':')[0]
     await ctx.send("AI Model Updated")
 ### END AI MODEL
 
