@@ -74,6 +74,11 @@ helpEmbedFree = interactions.Embed(
             inline=False
         ),
         interactions.EmbedField(
+            name="/import",
+            value="Import a ChatGPT thread into Virtu",
+            inline=False
+        ),
+        interactions.EmbedField(
             name="/reset",
             value="Resets Virtu's memory, who did you say you were again?",
             inline=False
@@ -135,6 +140,11 @@ helpEmbedPremium = interactions.Embed(
         interactions.EmbedField(
             name="/chat <prompt>",
             value="Chat with Virtu. Virtu will respond to your prompts and try to answer questions",
+            inline=False
+        ),
+        interactions.EmbedField(
+            name="/import",
+            value="Import a ChatGPT thread into Virtu",
             inline=False
         ),
         interactions.EmbedField(
