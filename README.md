@@ -6,7 +6,15 @@ The bot has 2 different forms of memory, per-channel and per-user (as well as a 
 Virtu essentially mimicks ChatGPT via a history system and is easy to use on Discord, supporting `/chat` slash commands as well as a `$` prefix for per-channel chat
 
 ## How to use it?
-All commands are `/` commands, except for the `$` prefix, which can be used as a shortcut for per-channel chat, for more info you can run `/help`
+`/chat <prompt>` - Chat with Virtu
+`/reset` - Reset Virtu's memory
+`/history` - View Virtu's memory
+`/config <config option>` - Configure Virtu
+`/import` - Import a chat from chatGPT
+`/initialise` - [PREMIUM] reset Virtu and initialise it using a specified "prompt file"
+`/retry` - [PREMIUM] retry the last prompt
+`/sprudermode <prompt> <messages>` - [PREMIUM] AI talks to itself for <messages> number of messages via shared memory and starts off with <prompt>
+
 
 ## What is Virtu Premium
 To avoid API usage abuse, there is a cooldown on `/chat` commands and other quota-intensive commands, this (and the timeout) can be bypassed if a user provides their own API key, which will be used for all command which they execute
