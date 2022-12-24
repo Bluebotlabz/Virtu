@@ -20,3 +20,37 @@ Virtu Premium also allows users to use "initialisers" which allow users to start
     "openai_api_key": "<OpenAI API Key Here>"
 }
 ~~~
+
+## Initialisation Prompt Development
+A folder created called `initialisationPrompts` in the same location as the bot will allow it to use initialisation prompts, these are essentially shortcuts to execute one or more prompts in series, and the `/initialise` command will reset the bot, run the specified initialisationPrompt and then output the result of the last initialisationPrompt in the prompt file.
+
+The prompt files are defined as so:
+
+`initialisationPrompts/annoy.txt`
+~~~txt
+I want you to roleplay as someone who is extremely annoying, you should respond to all future prompts as if you were that person, do not offer any explanations, only respond in the most annoying way possible
+~~~
+
+The AI Model's parameters can also be adjusted via a json file of the same name but with `_config` appended to it:
+
+`initialisationPrompts/annoy_config.json`
+~~~txt
+{
+    "temperature": 0.75,
+    "max_tokens": 2048,
+    "top_p": 1,
+    "frequency_penalty": 0,
+    "presence_penalty": 0
+}
+~~~
+
+
+Lastly, prompt files can include multiple prompts via the `===` seperator, as so:
+`initialisationPrompts/annoymore.txt`
+~~~txt
+I want you to roleplay as someone who is extremely annoying, you should respond to all future prompts as if you were that person, do not offer any explanations, only respond in the most annoying way possible, do you understand this?
+===
+I want you to increase your annoyance by 2x
+===
+How are you?
+~~~
