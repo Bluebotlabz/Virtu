@@ -7,12 +7,19 @@ Virtu essentially mimicks ChatGPT via a history system and is easy to use on Dis
 
 ## How to use it?
 `/chat <prompt>` - Chat with Virtu
+
 `/reset` - Reset Virtu's memory
+
 `/history` - View Virtu's memory
+
 `/config <config option>` - Configure Virtu
+
 `/import` - Import a chat from chatGPT
+
 `/initialise` - [PREMIUM] reset Virtu and initialise it using a specified "prompt file"
+
 `/retry` - [PREMIUM] retry the last prompt
+
 `/sprudermode <prompt> <messages>` - [PREMIUM] AI talks to itself for <messages> number of messages via shared memory and starts off with <prompt>
 
 
