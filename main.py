@@ -206,21 +206,42 @@ def quotePrompt(prompt):
     return '\n'.join(quotes)
 
 def splitMessage(text):
-    responses = []
-    responseIndex = 0
-    responseLength = 0
+    """
+    This function splits a message into multiple parts if it is too long.
+    :param text: The text to split
+    :return: An array of strings representing the split message
+    """
+    responses = [] # Array to store the split messages
+    responseIndex = 0 # Index of the current response
+    responseLength = 0 # Length of the current response
 
+    # Iterate through each line of the message
     for line in text.strip().split('\n'):
+        # If the length of the line is greater than 2000 characters, or if it is the first response and the length is greater than 1500 characters, move to the next response
         if (responseLength + len(line) >= 2000 or (line == text.strip().split('\n')[0] and responseLength + len(line) >= 1500)):
             responseIndex += 1
 
-        try:
+        # If the line is longer than 2000 characters, split it into multiple lines
+        while len(line) > 2000:
+            # If the response index is within the range of the responses array, add the line to the existing response
+            if responseIndex < len(responses):
+                responses[responseIndex] += '\n' + line[:2000]
+            # Otherwise, create a new response
+            else:
+                if (line != '' and line.strip() != ''):
+                    responses.append('\n' + line[:2000])
+            line = line[2000:]
+            responseLength = 0
+
+        # If the response index is within the range of the responses array, add the line to the existing response
+        if responseIndex < len(responses):
             responses[responseIndex] += '\n' + line
-        except:
+        # Otherwise, create a new response
+        else:
             if (line != '' and line.strip() != ''):
                 responses.append('\n' + line)
         responseLength += len(line)
-    
+
     return responses
 
 # REGISTER COMMANDS #
@@ -811,8 +832,11 @@ async def prefixHandler(message: interactions.api.models.message.Message):
                 message.reply("You are trying to use a legacy per-channel command, this has been replaced by an optional argument in / commands, see `/help` for more info")
             else:
                 returnedMessage = await message.reply(quotePrompt(message.content[1:]) + "\n\nPlease wait...")
-                response = getAIModel( guildID, message.author.id, channel.id, "perChannel" ).processPrompt(message.content[1:])
-                await returnedMessage.edit(quotePrompt(message.content[1:]) + '\n\n' + response)
+                responses = splitMessage(getAIModel( guildID, message.author.id, channel.id, "perChannel" ).processPrompt(message.content[1:]))
+
+                await returnedMessage.edit(quotePrompt(message.content[1:]) + '\n\n' + responses[0])
+                for response in responses[1:]:
+                    channel.send(response)
     except interactions.api.error.LibraryException as e:
         print(e)
 

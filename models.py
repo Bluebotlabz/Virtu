@@ -142,8 +142,6 @@ class OpenAICompletionModel():
         except openai.error.InvalidRequestError as e:
             print(e)
             response = "[HISTORY FULL - PLEASE RESET]"
-        except Exception as e:
-            response = "Fatal Error, please report this to the developer: `" + str(e) + "`"
 
         if (not self.premiumMode and not error):
             self.timeout = time.time() + 30
